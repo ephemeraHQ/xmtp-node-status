@@ -8,7 +8,6 @@ from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
 JSON_DATA = [
     {"NodeID": 101, "HttpAddress": "https://grpc.testnet.xmtp.network"},
     {"NodeID": 200, "HttpAddress": "https://grpc2.testnet.xmtp.network"},
-    {"NodeID": 300, "HttpAddress": "https://xmtpd-testnet-public-terraform-example.com"},
     {"NodeID": 400, "HttpAddress": "https://xmtp.nextnext.id"},
     {"NodeID": 500, "HttpAddress": "https://grpc.ens-xmtp.com"},
     {"NodeID": 600, "HttpAddress": "https://xmtp.validators.laminatedlabs.net"},
