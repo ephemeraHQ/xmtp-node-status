@@ -11,7 +11,8 @@ JSON_DATA = [
     {"NodeID": 400, "HttpAddress": "https://xmtp.nextnext.id"},
     {"NodeID": 500, "HttpAddress": "https://grpc.ens-xmtp.com"},
     {"NodeID": 600, "HttpAddress": "https://xmtp.validators.laminatedlabs.net"},
-    {"NodeID": 700, "HttpAddress": "https://xmtp.artifact.systems"}
+    {"NodeID": 700, "HttpAddress": "https://xmtp.artifact.systems"},
+    {"NodeID": 800, "HttpAddress": "https://xmtpd.nodleprotocol.io"}
 ]
 
 # Extract and format addresses (remove HTTPS, add :443)
