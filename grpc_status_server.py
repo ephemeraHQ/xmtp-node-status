@@ -1,23 +1,43 @@
+import os
+
 from flask import Flask, render_template_string
 import grpc
 import concurrent.futures
 import time
 from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
 
-# JSON input (List of gRPC nodes)
-JSON_DATA = [
-    {"NodeID": 101, "HttpAddress": "https://grpc.testnet.xmtp.network"},
-    {"NodeID": 200, "HttpAddress": "https://grpc2.testnet.xmtp.network"},
-    {"NodeID": 400, "HttpAddress": "https://xmtp.nextnext.id"},
-    {"NodeID": 500, "HttpAddress": "https://grpc.ens-xmtp.com"},
-    {"NodeID": 600, "HttpAddress": "https://xmtp.validators.laminatedlabs.net"},
-    {"NodeID": 700, "HttpAddress": "https://xmtp.artifact.systems"},
-    {"NodeID": 800, "HttpAddress": "https://xmtpd.nodleprotocol.io"}
-]
+import json
 
-# Extract and format addresses (remove HTTPS, add :443)
-addresses = {entry["HttpAddress"].replace("https://", "") + ":443": "Checking..." for entry in JSON_DATA}
-errors = {address: "" for address in addresses}  # Store additional error details
+from web3 import Web3
+
+from collections import defaultdict
+
+def get_addresses():
+    web3 = Web3(Web3.HTTPProvider(os.environ["WEB3_PROVIDER_URI"]))
+
+    # Check if connected to Ethereum network
+    if not web3.is_connected():
+        raise ConnectionError("Failed to connect to Ethereum network")
+
+    # Contract address
+    contract_address = "0x390D339A6C0Aa432876B5C898b16287Cacde2A0A"
+
+    with open("Nodes.json", "r") as abi_file:
+        contract = json.load(abi_file)
+
+    contract_abi = contract["abi"]
+
+
+    # Load the contract
+    contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+    # Example: Call a function from the contract (Replace 'functionName' with actual function)
+    result = contract.functions.healthyNodes().call()
+
+    return [node[1][1].replace("https://", "") + ":443" for node in result]
+
+addresses = {}
+errors = defaultdict(str)
 
 app = Flask(__name__)
 
@@ -60,15 +80,36 @@ def check_grpc_status(address):
 
 def update_status():
     """
-    Runs gRPC checks in parallel for all addresses using ThreadPoolExecutor.
+    Runs gRPC checks in parallel for all addresses using ThreadPoolExecutor
+    and updates the list of addresses dynamically.
     """
-    global addresses
+    global addresses, errors
     while True:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_address = {executor.submit(check_grpc_status, addr): addr for addr in addresses.keys()}
-            for future in concurrent.futures.as_completed(future_to_address):
-                address, status = future.result()
-                addresses[address] = status  # Update the dictionary with the new status
+        try:
+            new_addresses = set(get_addresses())  # Fetch the latest node addresses
+
+            # Identify added and removed addresses
+            current_addresses = set(addresses.keys())
+            added_addresses = new_addresses - current_addresses
+            removed_addresses = current_addresses - new_addresses
+
+            # Remove old addresses
+            for addr in removed_addresses:
+                addresses.pop(addr, None)
+                errors.pop(addr, None)
+
+            # Add new addresses with a default status
+            for addr in added_addresses:
+                addresses[addr] = "Checking..."
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                future_to_address = {executor.submit(check_grpc_status, addr): addr for addr in addresses.keys()}
+                for future in concurrent.futures.as_completed(future_to_address):
+                    address, status = future.result()
+                    addresses[address] = status  # Update the dictionary with the new status
+
+        except Exception as e:
+            print(f"Error updating status: {e}")  # Log errors if any
 
         time.sleep(10)  # Refresh every 10 seconds
 

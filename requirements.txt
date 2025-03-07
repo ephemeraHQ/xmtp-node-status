@@ -1,3 +1,4 @@
-flask
-grpcio
-grpcio-reflection
+flask~=3.1.0
+grpcio~=1.70.0
+grpcio-reflection~=1.70.0
+web3~=7.8.0
