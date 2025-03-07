@@ -120,43 +120,78 @@ import threading
 threading.Thread(target=update_status, daemon=True).start()
 
 
-# Flask Web Route
+@app.route("/data")
+def data():
+    return {"addresses": addresses, "errors": errors}
 @app.route("/")
 def index():
     return render_template_string("""
         <html>
         <head>
             <title>XMTP Node Status</title>
-            <meta http-equiv="refresh" content="1">
             <style>
                 body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f9f9f9; }
                 table { margin: auto; border-collapse: collapse; width: 70%; background: white; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); }
                 th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-                th { background-color: #007bff; color: white; }
+                th { background-color: #007bff; color: white; cursor: pointer; }
                 .error-tooltip {
                     text-decoration: underline;
                     cursor: help;
                     color: red;
                 }
             </style>
+            <script>
+                function refreshData() {
+                    fetch('/data')  // Fetch updated data from the server
+                        .then(response => response.json())
+                        .then(data => {
+                            let tableBody = document.getElementById("status-table-body");
+                            tableBody.innerHTML = ""; // Clear existing rows
+
+                            Object.keys(data.addresses).sort().forEach(addr => {
+                                let row = tableBody.insertRow();
+                                let cell1 = row.insertCell(0);
+                                let cell2 = row.insertCell(1);
+                                
+                                cell1.textContent = addr;
+                                if (data.addresses[addr].includes("Error") || data.addresses[addr].includes("Exception")) {
+                                    cell2.innerHTML = `<span class="error-tooltip" title="${data.errors[addr]}">${data.addresses[addr]}</span>`;
+                                } else {
+                                    cell2.textContent = data.addresses[addr];
+                                }
+                            });
+                        })
+                        .catch(error => console.error("Error fetching data:", error));
+                }
+
+                setInterval(refreshData, 1000);  // Refresh every second without page reload
+                window.onload = refreshData;  // Load data on page load
+            </script>
         </head>
-        <body>
+<body>
             <h1>XMTP Node Status</h1>
-            <p>Page refreshes every second</p>
+            <p>Data refreshes every second</p>
             <table>
-                <tr><th>Node Address</th><th>Status</th></tr>
-                {% for addr, status in addresses.items() %}
-                <tr>
-                    <td>{{ addr }}</td>
-                    <td>
-                        {% if "Error" in status or "Exception" in status %}
-                            <span class="error-tooltip" title="{{ errors[addr] }}">{{ status }}</span>
-                        {% else %}
-                            {{ status }}
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
+                <thead>
+                    <tr>
+                        <th>Node Address</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="status-table-body">
+                    {% for addr, status in addresses.items() %}
+                    <tr>
+                        <td>{{ addr }}</td>
+                        <td>
+                            {% if "Error" in status or "Exception" in status %}
+                                <span class="error-tooltip" title="{{ errors[addr] }}">{{ status }}</span>
+                            {% else %}
+                                {{ status }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </body>
         </html>
