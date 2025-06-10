@@ -20,7 +20,7 @@ def get_addresses():
         raise ConnectionError("Failed to connect to Ethereum network")
 
     # Contract address
-    contract_address = "0xD37ccd1DD051491f106f8b0A954BDc9AdA6FC731"
+    contract_address = "0x5275FfA7D1f5aBd4159Ae38925fD9F4D5686725E"
 
     with open("NodeRegistry.abi.json", "r") as abi_file:
         contract = json.load(abi_file)
@@ -28,12 +28,15 @@ def get_addresses():
     # Load the contract
     contract = web3.eth.contract(address=contract_address, abi=contract)
 
-    # Example: Call a function from the contract (Replace 'functionName' with actual function)
     result = contract.functions.getAllNodes().call()
 
-    nodes = list(map(lambda node: node[1][1].replace("https://", "") + ":443", filter(lambda node: node[1][2], result)))
+    canonical_nodes = [
+        node[1][3].replace("https://", "") + ":443"
+        for node in result
+        if node[1][1] is True and node[1][3]  # isCanonical and has httpAddress
+    ]
 
-    return nodes
+    return canonical_nodes
 
 addresses = {}
 errors = defaultdict(str)
