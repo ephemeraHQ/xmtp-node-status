@@ -1,23 +1,23 @@
-import os
-
+from collections import defaultdict
+import concurrent.futures
 from flask import Flask, render_template_string
 import grpc
-import concurrent.futures
-import time
 from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
-
 import json
-
+import os
+import time
 from web3 import Web3
 
-from collections import defaultdict
+addresses = {}
+errors = defaultdict(str)
+versions = defaultdict(str)
+app = Flask(__name__)
 
 def get_addresses():
     web3 = Web3(Web3.HTTPProvider(os.environ["WEB3_PROVIDER_URI"]))
 
-    # Check if connected to Ethereum network
     if not web3.is_connected():
-        raise ConnectionError("Failed to connect to Ethereum network")
+        raise ConnectionError("Failed to connect to the network")
 
     # Contract address
     contract_address = "0x5275FfA7D1f5aBd4159Ae38925fD9F4D5686725E"
@@ -38,17 +38,13 @@ def get_addresses():
 
     return canonical_nodes
 
-addresses = {}
-errors = defaultdict(str)
-
-app = Flask(__name__)
-
-
 def check_grpc_status(address):
     """
     Function to check if the gRPC endpoint is reachable
     by establishing a secure gRPC connection and calling the reflection API.
     """
+    version = "no version detected"
+    
     try:
         # Create a secure gRPC channel
         channel = grpc.secure_channel(address, grpc.ssl_channel_credentials())
@@ -57,28 +53,78 @@ def check_grpc_status(address):
         stub = reflection_pb2_grpc.ServerReflectionStub(channel)
         request = reflection_pb2.ServerReflectionRequest(list_services="")
 
-        # Call the reflection API
-        response_iterator = stub.ServerReflectionInfo(iter([request]))
-        services = [resp.list_services_response for resp in response_iterator]
+        # Call the reflection API with timeout
+        response_iterator = stub.ServerReflectionInfo(iter([request]), timeout=10)
+        services = []
+        
+        for resp in response_iterator:
+            if resp.HasField('list_services_response'):
+                services.extend([service.name for service in resp.list_services_response.service])
 
         # If response is received, mark as reachable
         if services:
             errors[address] = ""  # Clear any previous errors
-            return address, "✅ Reachable"
+            version = get_service_version(services, channel)
+            channel.close()
+            return address, version, "✅ Reachable"
+
         else:
             errors[address] = "No response from server"
-            return address, "❌ No Response"
+            channel.close()
+            return address, version, "❌ No Response"
 
     except grpc.RpcError as e:
         error_message = f"gRPC Error: {e.code().name} - {str(e.details())}"
         errors[address] = error_message
-        return address, f"❌ Error: {e.code().name}"
+        return address, version, f"❌ Error: {e.code().name}"
 
     except Exception as e:
         error_message = f"Exception: {str(e)}"
         errors[address] = error_message
-        return address, "⚠️ Exception"
+        return address, version, "⚠️ Exception"
 
+def get_service_version(services, channel):
+    """
+    Try to get version information from MetadataApi service
+    """
+    version = "no version detected"
+    
+    # Look for the MetadataApi service specifically
+    metadata_service = None
+    for service in services:
+        if 'xmtp.xmtpv4.metadata_api.MetadataApi' in service:
+            metadata_service = service
+            break
+    
+    if not metadata_service:
+        return version
+    
+    try:
+        # Import the generated stubs
+        import metadata_api_pb2 as metadata_api_pb2
+        import metadata_api_pb2_grpc as metadata_api_pb2_grpc
+        
+        # Create the MetadataApi stub
+        stub = metadata_api_pb2_grpc.MetadataApiStub(channel)
+        
+        # Create the GetVersion request
+        request = metadata_api_pb2.GetVersionRequest()
+        
+        # Call GetVersion with a timeout
+        response = stub.GetVersion(request, timeout=2)
+        
+        # Return the actual version string
+        if response.version:
+            return response.version
+        else:
+            return version
+            
+    except grpc.RpcError as e:
+        return version
+    except ImportError as e:
+        return version
+    except Exception as e:
+        return version
 
 def update_status():
     """
@@ -107,24 +153,23 @@ def update_status():
             with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
                 future_to_address = {executor.submit(check_grpc_status, addr): addr for addr in addresses.keys()}
                 for future in concurrent.futures.as_completed(future_to_address):
-                    address, status = future.result()
+                    address, version, status = future.result()
                     addresses[address] = status  # Update the dictionary with the new status
+                    versions[address] = version
 
         except Exception as e:
             print(f"Error updating status: {e}")  # Log errors if any
 
         time.sleep(10)  # Refresh every 10 seconds
 
-
 # Start gRPC checking in a separate thread
 import threading
 
 threading.Thread(target=update_status, daemon=True).start()
 
-
 @app.route("/data")
 def data():
-    return {"addresses": addresses, "errors": errors}
+    return {"addresses": addresses, "versions": versions, "errors": errors}
 @app.route("/")
 def index():
     return render_template_string("""
@@ -154,12 +199,14 @@ def index():
                                 let row = tableBody.insertRow();
                                 let cell1 = row.insertCell(0);
                                 let cell2 = row.insertCell(1);
-                                
+                                let cell3 = row.insertCell(2);
+
                                 cell1.textContent = addr;
+                                cell2.textContent = data.versions[addr];
                                 if (data.addresses[addr].includes("Error") || data.addresses[addr].includes("Exception")) {
-                                    cell2.innerHTML = `<span class="error-tooltip" title="${data.errors[addr]}">${data.addresses[addr]}</span>`;
+                                    cell3.innerHTML = `<span class="error-tooltip" title="${data.errors[addr]}">${data.addresses[addr]}</span>`;
                                 } else {
-                                    cell2.textContent = data.addresses[addr];
+                                    cell3.textContent = data.addresses[addr];
                                 }
                             });
                         })
@@ -177,6 +224,7 @@ def index():
                 <thead>
                     <tr>
                         <th>Node Address</th>
+                        <th>Version</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -184,6 +232,7 @@ def index():
                     {% for addr, status in addresses.items() %}
                     <tr>
                         <td>{{ addr }}</td>
+                        <td>{{ versions[addr] }}</td>
                         <td>
                             {% if "Error" in status or "Exception" in status %}
                                 <span class="error-tooltip" title="{{ errors[addr] }}">{{ status }}</span>
@@ -197,8 +246,7 @@ def index():
             </table>
         </body>
         </html>
-    """, addresses=addresses, errors=errors)
-
+    """, addresses=addresses, versions=versions, errors=errors)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)  # Accessible from local network
