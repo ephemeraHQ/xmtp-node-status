@@ -7,11 +7,15 @@ import json
 import os
 import time
 from web3 import Web3
+import threading
 
 addresses = {}
 errors = defaultdict(str)
 versions = defaultdict(str)
 app = Flask(__name__)
+
+# Global executor.
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 
 def get_addresses():
     web3 = Web3(Web3.HTTPProvider(os.environ["WEB3_PROVIDER_URI"]))
@@ -44,19 +48,29 @@ def check_grpc_status(address):
     by establishing a secure gRPC connection and calling the reflection API.
     """
     version = "no version detected"
-    
+    channel = None
+
     try:
-        # Create a secure gRPC channel
-        channel = grpc.secure_channel(address, grpc.ssl_channel_credentials())
+        # Create a secure gRPC channel with keepalive options.
+        options = [
+            ('grpc.keepalive_time_ms', 30000),
+            ('grpc.keepalive_timeout_ms', 5000),
+            ('grpc.keepalive_permit_without_calls', True),
+            ('grpc.http2.max_pings_without_data', 0),
+            ('grpc.http2.min_time_between_pings_ms', 10000),
+            ('grpc.http2.min_ping_interval_without_data_ms', 300000)
+        ]
+
+        channel = grpc.secure_channel(address, grpc.ssl_channel_credentials(), options=options)
 
         # Create a stub for reflection API
         stub = reflection_pb2_grpc.ServerReflectionStub(channel)
         request = reflection_pb2.ServerReflectionRequest(list_services="")
 
         # Call the reflection API with timeout
-        response_iterator = stub.ServerReflectionInfo(iter([request]), timeout=10)
+        response_iterator = stub.ServerReflectionInfo(iter([request]), timeout=5)
         services = []
-        
+
         for resp in response_iterator:
             if resp.HasField('list_services_response'):
                 services.extend([service.name for service in resp.list_services_response.service])
@@ -65,12 +79,10 @@ def check_grpc_status(address):
         if services:
             errors[address] = ""  # Clear any previous errors
             version = get_service_version(services, channel)
-            channel.close()
             return address, version, "✅ Reachable"
 
         else:
             errors[address] = "No response from server"
-            channel.close()
             return address, version, "❌ No Response"
 
     except grpc.RpcError as e:
@@ -83,42 +95,49 @@ def check_grpc_status(address):
         errors[address] = error_message
         return address, version, "⚠️ Exception"
 
+    finally:
+        if channel:
+            try:
+                channel.close()
+            except Exception as e:
+                pass
+
 def get_service_version(services, channel):
     """
     Try to get version information from MetadataApi service
     """
     version = "no version detected"
-    
+
     # Look for the MetadataApi service specifically
     metadata_service = None
     for service in services:
         if 'xmtp.xmtpv4.metadata_api.MetadataApi' in service:
             metadata_service = service
             break
-    
+
     if not metadata_service:
         return version
-    
+
     try:
         # Import the generated stubs
         import metadata_api_pb2 as metadata_api_pb2
         import metadata_api_pb2_grpc as metadata_api_pb2_grpc
-        
+
         # Create the MetadataApi stub
         stub = metadata_api_pb2_grpc.MetadataApiStub(channel)
-        
+
         # Create the GetVersion request
         request = metadata_api_pb2.GetVersionRequest()
-        
-        # Call GetVersion with a timeout
-        response = stub.GetVersion(request, timeout=2)
-        
+
+        # Call GetVersion.
+        response = stub.GetVersion(request, timeout=3)
+
         # Return the actual version string
         if response.version:
             return response.version
         else:
             return version
-            
+
     except grpc.RpcError as e:
         return version
     except ImportError as e:
@@ -132,9 +151,10 @@ def update_status():
     and updates the list of addresses dynamically.
     """
     global addresses, errors
+
     while True:
         try:
-            new_addresses = set(get_addresses())  # Fetch the latest node addresses
+            new_addresses = set(get_addresses())
 
             # Identify added and removed addresses
             current_addresses = set(addresses.keys())
@@ -150,26 +170,43 @@ def update_status():
             for addr in added_addresses:
                 addresses[addr] = "Checking..."
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-                future_to_address = {executor.submit(check_grpc_status, addr): addr for addr in addresses.keys()}
-                for future in concurrent.futures.as_completed(future_to_address):
+            future_to_address = {executor.submit(check_grpc_status, addr): addr for addr in addresses.keys()}
+
+            # Wait for all futures to complete with a timeout
+            for future in concurrent.futures.as_completed(future_to_address, timeout=15):
+                try:
                     address, version, status = future.result()
-                    addresses[address] = status  # Update the dictionary with the new status
+                    addresses[address] = status
                     versions[address] = version
+                except Exception as e:
+                    addr = future_to_address[future]
+                    addresses[addr] = "⚠️ Processing Error"
+                    errors[addr] = str(e)
 
+            # Cancel any remaining futures
+            for future in future_to_address:
+                if not future.done():
+                    future.cancel()
+
+        except concurrent.futures.TimeoutError:
+            # Mark timed out addresses
+            for future, addr in future_to_address.items():
+                if not future.done():
+                    addresses[addr] = "⚠️ Timeout"
+                    errors[addr] = "Check timed out"
+                    future.cancel()
         except Exception as e:
-            print(f"Error updating status: {e}")  # Log errors if any
+            print(f"Error updating status: {e}")
 
-        time.sleep(10)  # Refresh every 10 seconds
+        time.sleep(15)
 
-# Start gRPC checking in a separate thread
-import threading
-
+# Start gRPC checking in a separate thread.
 threading.Thread(target=update_status, daemon=True).start()
 
 @app.route("/data")
 def data():
     return {"addresses": addresses, "versions": versions, "errors": errors}
+
 @app.route("/")
 def index():
     return render_template_string("""
@@ -213,13 +250,13 @@ def index():
                         .catch(error => console.error("Error fetching data:", error));
                 }
 
-                setInterval(refreshData, 1000);  // Refresh every second without page reload
-                window.onload = refreshData;  // Load data on page load
+                setInterval(refreshData, 5000);
+                window.onload = refreshData;
             </script>
         </head>
 <body>
             <h1>XMTP Node Status</h1>
-            <p>Data refreshes every second</p>
+            <p>Data refreshes every 15 seconds</p>
             <table>
                 <thead>
                     <tr>
@@ -249,4 +286,4 @@ def index():
     """, addresses=addresses, versions=versions, errors=errors)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)  # Accessible from local network
+    app.run(host="0.0.0.0", port=5000, debug=True)
