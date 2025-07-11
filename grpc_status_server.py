@@ -250,13 +250,13 @@ def index():
                         .catch(error => console.error("Error fetching data:", error));
                 }
 
-                setInterval(refreshData, 5000);
+                setInterval(refreshData, 1000);
                 window.onload = refreshData;
             </script>
         </head>
 <body>
             <h1>XMTP Node Status</h1>
-            <p>Data refreshes every 15 seconds</p>
+            <p>Data refreshes every second</p>
             <table>
                 <thead>
                     <tr>
