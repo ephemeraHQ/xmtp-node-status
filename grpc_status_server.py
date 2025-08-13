@@ -24,7 +24,7 @@ def get_addresses():
         raise ConnectionError("Failed to connect to the network")
 
     # Contract address
-    contract_address = "0x5275FfA7D1f5aBd4159Ae38925fD9F4D5686725E"
+    contract_address = "0xA37E3985aD817788aD2E287965041E9BcEd38F00"
 
     with open("NodeRegistry.abi.json", "r") as abi_file:
         contract = json.load(abi_file)
