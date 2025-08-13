@@ -23,11 +23,12 @@ def get_addresses():
     if not web3.is_connected():
         raise ConnectionError("Failed to connect to the network")
 
-    # Contract address
-    contract_address = "0xA37E3985aD817788aD2E287965041E9BcEd38F00"
-
     with open("NodeRegistry.abi.json", "r") as abi_file:
         contract = json.load(abi_file)
+
+    with open("testnet.json", "r") as json_file:
+        testnet = json.load(json_file)
+        contract_address = testnet["settlementChainGateway"]
 
     # Load the contract
     contract = web3.eth.contract(address=contract_address, abi=contract)
