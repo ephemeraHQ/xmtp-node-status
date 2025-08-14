@@ -3,3 +3,4 @@ grpcio~=1.74.0
 grpcio-reflection~=1.74.0
 web3~=7.8.0
 protobuf>=6
+google-api-python-client~=2.179.0

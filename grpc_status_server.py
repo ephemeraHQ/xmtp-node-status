@@ -140,13 +140,10 @@ def get_service_version(services, channel):
             return version
 
     except grpc.RpcError as e:
-        print(e)
         return version
     except ImportError as e:
-        print(e)
         return version
     except Exception as e:
-        print(e)
         return version
 
 def update_status():
