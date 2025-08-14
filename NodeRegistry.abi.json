@@ -90,8 +90,8 @@
     "outputs": [
       {
         "name": "key_",
-        "type": "bytes",
-        "internalType": "bytes"
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "stateMutability": "pure"
@@ -368,8 +368,8 @@
     "outputs": [
       {
         "name": "key_",
-        "type": "bytes",
-        "internalType": "bytes"
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "stateMutability": "pure"
@@ -388,8 +388,8 @@
     "outputs": [
       {
         "name": "key_",
-        "type": "bytes",
-        "internalType": "bytes"
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "stateMutability": "pure"
