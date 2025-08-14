@@ -28,7 +28,7 @@ def get_addresses():
 
     with open("testnet.json", "r") as json_file:
         testnet = json.load(json_file)
-        contract_address = testnet["settlementChainGateway"]
+        contract_address = testnet["nodeRegistry"]
 
     # Load the contract
     contract = web3.eth.contract(address=contract_address, abi=contract)
