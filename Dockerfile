@@ -13,6 +13,8 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY NodeRegistry.abi.json /app/NodeRegistry.abi.json
 COPY testnet.json /app/testnet.json
 
+COPY xmtpv4/ /app/xmtpv4/
+
 # Copy the actual script last (ensures that if only the script changes, the previous layers are cached)
 COPY grpc_status_server.py /app/grpc_status_server.py
 

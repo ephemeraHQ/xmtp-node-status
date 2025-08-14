@@ -121,8 +121,8 @@ def get_service_version(services, channel):
 
     try:
         # Import the generated stubs
-        import metadata_api_pb2 as metadata_api_pb2
-        import metadata_api_pb2_grpc as metadata_api_pb2_grpc
+        import xmtpv4.metadata_api.metadata_api_pb2 as metadata_api_pb2
+        import xmtpv4.metadata_api.metadata_api_pb2_grpc as metadata_api_pb2_grpc
 
         # Create the MetadataApi stub
         stub = metadata_api_pb2_grpc.MetadataApiStub(channel)
