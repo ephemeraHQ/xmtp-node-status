@@ -23,7 +23,7 @@ _sym_db = _symbol_database.Default()
 
 
 from google.api import annotations_pb2 as google_dot_api_dot_annotations__pb2
-from xmtpv4.envelopes import envelopes_pb2 as xmtpv4_dot_envelopes_dot_envelopes__pb2
+from proto.xmtpv4.envelopes import envelopes_pb2 as xmtpv4_dot_envelopes_dot_envelopes__pb2
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n xmtpv4/payer_api/payer_api.proto\x12\x15xmtp.xmtpv4.payer_api\x1a\x1cgoogle/api/annotations.proto\x1a xmtpv4/envelopes/envelopes.proto\"d\n\x1dPublishClientEnvelopesRequest\x12\x43\n\tenvelopes\x18\x01 \x03(\x0b\x32%.xmtp.xmtpv4.envelopes.ClientEnvelopeR\tenvelopes\"~\n\x1ePublishClientEnvelopesResponse\x12\\\n\x14originator_envelopes\x18\x01 \x03(\x0b\x32).xmtp.xmtpv4.envelopes.OriginatorEnvelopeR\x13originatorEnvelopes\"\x16\n\x14GetReaderNodeRequest\"i\n\x15GetReaderNodeResponse\x12&\n\x0freader_node_url\x18\x01 \x01(\tR\rreaderNodeUrl\x12(\n\x10\x62\x61\x63kup_node_urls\x18\x02 \x03(\tR\x0e\x62\x61\x63kupNodeUrls2\xdc\x02\n\x08PayerApi\x12\xb8\x01\n\x16PublishClientEnvelopes\x12\x34.xmtp.xmtpv4.payer_api.PublishClientEnvelopesRequest\x1a\x35.xmtp.xmtpv4.payer_api.PublishClientEnvelopesResponse\"1\x82\xd3\xe4\x93\x02+\"&/mls/v2/payer/publish-client-envelopes:\x01*\x12\x94\x01\n\rGetReaderNode\x12+.xmtp.xmtpv4.payer_api.GetReaderNodeRequest\x1a,.xmtp.xmtpv4.payer_api.GetReaderNodeResponse\"(\x82\xd3\xe4\x93\x02\"\"\x1d/mls/v2/payer/get-reader-node:\x01*B\xca\x01\n\x19\x63om.xmtp.xmtpv4.payer_apiB\rPayerApiProtoP\x01Z,github.com/xmtp/proto/v3/go/xmtpv4/payer_api\xa2\x02\x03XXP\xaa\x02\x14Xmtp.Xmtpv4.PayerApi\xca\x02\x14Xmtp\\Xmtpv4\\PayerApi\xe2\x02 Xmtp\\Xmtpv4\\PayerApi\\GPBMetadata\xea\x02\x16Xmtp::Xmtpv4::PayerApib\x06proto3')

@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from xmtpv4.metadata_api import metadata_api_pb2 as xmtpv4_dot_metadata__api_dot_metadata__api__pb2
+from proto.xmtpv4.metadata_api import metadata_api_pb2 as xmtpv4_dot_metadata__api_dot_metadata__api__pb2
 
 
 class MetadataApiStub(object):

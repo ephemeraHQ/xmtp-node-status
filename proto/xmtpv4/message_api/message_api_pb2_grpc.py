@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from xmtpv4.message_api import message_api_pb2 as xmtpv4_dot_message__api_dot_message__api__pb2
+from proto.xmtpv4.message_api import message_api_pb2 as xmtpv4_dot_message__api_dot_message__api__pb2
 
 
 class ReplicationApiStub(object):
