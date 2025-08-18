@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from xmtpv4.payer_api import payer_api_pb2 as xmtpv4_dot_payer__api_dot_payer__api__pb2
+from proto.xmtpv4.payer_api import payer_api_pb2 as xmtpv4_dot_payer__api_dot_payer__api__pb2
 
 
 class PayerApiStub(object):

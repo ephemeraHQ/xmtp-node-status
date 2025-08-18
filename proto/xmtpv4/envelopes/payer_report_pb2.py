@@ -22,7 +22,7 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from identity.associations import signature_pb2 as identity_dot_associations_dot_signature__pb2
+from proto.identity.associations import signature_pb2 as identity_dot_associations_dot_signature__pb2
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n#xmtpv4/envelopes/payer_report.proto\x12\x15xmtp.xmtpv4.envelopes\x1a%identity/associations/signature.proto\"\x9a\x02\n\x0bPayerReport\x12,\n\x12originator_node_id\x18\x01 \x01(\rR\x10originatorNodeId\x12*\n\x11start_sequence_id\x18\x02 \x01(\x04R\x0fstartSequenceId\x12&\n\x0f\x65nd_sequence_id\x18\x03 \x01(\x04R\rendSequenceId\x12\x33\n\x16\x65nd_minute_since_epoch\x18\x04 \x01(\rR\x13\x65ndMinuteSinceEpoch\x12,\n\x12payers_merkle_root\x18\x05 \x01(\x0cR\x10payersMerkleRoot\x12&\n\x0f\x61\x63tive_node_ids\x18\x06 \x03(\rR\ractiveNodeIds\"}\n\rNodeSignature\x12\x17\n\x07node_id\x18\x01 \x01(\rR\x06nodeId\x12S\n\tsignature\x18\x02 \x01(\x0b\x32\x35.xmtp.identity.associations.RecoverableEcdsaSignatureR\tsignature\"y\n\x16PayerReportAttestation\x12\x1b\n\treport_id\x18\x01 \x01(\x0cR\x08reportId\x12\x42\n\tsignature\x18\x02 \x01(\x0b\x32$.xmtp.xmtpv4.envelopes.NodeSignatureR\tsignatureB\xd1\x01\n\x19\x63om.xmtp.xmtpv4.envelopesB\x10PayerReportProtoP\x01Z,github.com/xmtp/proto/v3/go/xmtpv4/envelopes\xa2\x02\x03XXE\xaa\x02\x15Xmtp.Xmtpv4.Envelopes\xca\x02\x15Xmtp\\Xmtpv4\\Envelopes\xe2\x02!Xmtp\\Xmtpv4\\Envelopes\\GPBMetadata\xea\x02\x17Xmtp::Xmtpv4::Envelopesb\x06proto3')
